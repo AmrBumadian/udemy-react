@@ -6,28 +6,59 @@ import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faStar, faStarHalfStroke, faChevronLeft, faChevronRight} from '@fortawesome/free-solid-svg-icons'
 import {Link} from "react-router-dom";
 
+function cumulativeOffset(element) {
+	let top = 0;
+	do {
+		top += element.offsetTop || 0;
+		element = element.offsetParent;
+	} while (element);
+	return top;
+}
+
+function fixPosition(element) {
+	return setInterval(() => {
+		if (document.querySelector(".course")) {
+			let courseElement = document.querySelector(".course");
+			let pos = cumulativeOffset(courseElement) + courseElement.offsetHeight / 3.5;
+			element.setState({startPos: pos});
+			clearInterval(this.interval);
+		}
+	}, 100);
+}
+
+
 class PrevArrow extends React.Component {
+
 	constructor(props) {
 		super(props);
-		this.props = props;
+		this.state = {
+			startPos: 500
+		}
+		this.interval = fixPosition(this);
 	}
 
 	render() {
 		return (
-			<button id="prev-button" onClick={this.props.onClick}><FontAwesomeIcon icon={faChevronLeft}/></button>
+			<button style={{top: this.state.startPos}} id="prev-button" onClick={this.props.onClick}><FontAwesomeIcon
+				icon={faChevronLeft}/></button>
 		)
 	}
 }
 
 class NextArrow extends React.Component {
+
 	constructor(props) {
 		super(props);
-		this.props = props;
+		this.state = {
+			startPos: 500
+		}
+		this.interval = fixPosition(this);
 	}
 
 	render() {
 		return (
-			<button id="next-button" onClick={this.props.onClick}><FontAwesomeIcon icon={faChevronRight}/></button>
+			<button style={{top: this.state.startPos}} id="next-button" onClick={this.props.onClick}><FontAwesomeIcon
+				icon={faChevronRight}/></button>
 		)
 	}
 }
@@ -86,7 +117,8 @@ class Slicker extends React.Component {
 		return (
 			<section>
 				<Slider ref={c => (this.slider = c)} {...this.settings}>
-					{(coursesCard.length) ? coursesCard : <h2 className="empty-courses">There are no courses available</h2>}
+					{(coursesCard.length) ? coursesCard :
+						<h2 className="empty-courses">There are no courses available</h2>}
 				</Slider>
 				<NextArrow onClick={this.next}/>
 				<PrevArrow onClick={this.previous}/>

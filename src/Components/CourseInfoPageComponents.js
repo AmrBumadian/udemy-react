@@ -15,7 +15,7 @@ import {NavBarComponent} from "./NavBarComponent";
 
 import '../styles/course-page.css';
 
-let apiUrl = "http://localhost:8000/";
+let apiUrl = "http://localhost:5000/";
 
 class CourseHeader extends React.Component {
 	render() {

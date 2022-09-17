@@ -3,9 +3,10 @@ import {NavBarComponent} from "./NavBarComponent";
 import {Slicker} from "./CourseCardComponent";
 
 import '../styles/home.css';
+import {Outlet} from "react-router-dom";
 
 let allCoursesCache = [];
-let apiUrl = "http://localhost:5000/";
+let apiUrl = "http://localhost:8000/";
 
 class HomeHeader extends React.Component {
 	render() {
@@ -23,53 +24,88 @@ class HomeHeader extends React.Component {
 	}
 }
 
+class CategoriesNav extends React.Component {
+
+	render() {
+		return (
+			<ul className="categories" onClick={this.props.handleChange}>
+				{
+					this.props.categories.map((c, currentKey) => {
+						let id = c.replace(/\s/g, "");
+						if (id === this.props.chosenCategory) {
+							return <li key={currentKey} id={id} className="chosen-category">{c}</li>;
+						}
+						return <li key={currentKey} id={id}>{c}</li>;
+					})
+				}
+			</ul>
+		)
+	}
+}
+
 class CourseCategory extends React.Component {
 
 	constructor(props) {
 		super(props);
-		this.categoriesData = this.props.coursesData;
-		this.categoriesNames = Object.keys(this.categoriesData);
 		this.state = {
-			currentShownCategory: this.categoriesNames.at(0),
-			categoryData: this.categoriesData[this.categoriesNames.at(0)]
+			coursesData: {},
 		}
+		this.handleCategoryChange = this.handleCategoryChange.bind(this);
+		this.categoriesNames = [];
 	}
 
-	chooseCategory(event) {
+	componentDidMount() {
+		this.fetchAllCoursesData();
+	}
+
+	componentWillUnmount() {
+		allCoursesCache = [];
+	}
+
+	fetchAllCoursesData() {
+		fetch(apiUrl + "db")
+			.then(response => response.json())
+			.then(data => {
+				for (let category in data) {
+					this.categoriesNames.push(data[category]["name"]);
+					for (let course of data[category]["courses"]) {
+						allCoursesCache.push(course);
+					}
+				}
+				this.setState({
+					coursesData: data,
+					currentShownCategory: Object.keys(data).at(0)
+				});
+			});
+	}
+
+	handleCategoryChange(event) {
 		if (event.button !== 0) return;
 		let clickedListElement = event.target;
 		let chosenElementId = clickedListElement.getAttribute("id");
 		if (event.target.tagName !== "LI" || this.state.currentShownCategory === chosenElementId) return;
 		document.querySelector(".chosen-category").classList.remove("chosen-category");
 		clickedListElement.classList.add("chosen-category");
-		let newCategoryData = this.categoriesData[chosenElementId];
-		this.setState({currentShownCategory: chosenElementId, categoryData: newCategoryData})
+		this.setState({currentShownCategory: chosenElementId});
 		event.stopPropagation();
 	}
 
 	render() {
-		let currentKey = 0;
-		let items = this.categoriesNames.map((c) => {
-			if (c === this.state.currentShownCategory) {
-				return <li key={currentKey++} id={c.replace(/\s/g, "")}
-				           className="chosen-category">{this.categoriesData[c].name}</li>;
-			}
-			return <li key={currentKey++} id={c.replace(/\s/g, "")}>{this.categoriesData[c].name}</li>;
-		});
-		let currentCategory = this.categoriesData[this.state.currentShownCategory];
-		if (currentCategory === "") return (<section></section>);
+		if (Object.keys(this.state.coursesData).length === 0) return null;
+		let currentCategoryData = this.state.coursesData[this.state.currentShownCategory];
 		return (
 			<section>
-				<ul className="categories" onClick={(e) => this.chooseCategory(e)}>
-					{items}
-				</ul>
-				<section className="category">
-					<h3>{currentCategory.title}</h3>
-					<p className="category-description">{currentCategory.description}</p>
-					<button id="explore-category">Explore {currentCategory.name}</button>
-					<section id="courses" className="courses"><Slicker courses={currentCategory.courses}/>
-					</section>
-				</section>
+				<CategoriesNav categories={this.categoriesNames}
+				               chosenCategory={this.state.currentShownCategory}
+				               handleChange={this.handleCategoryChange}/>
+				{(currentCategoryData == null) ? (<section></section>) :
+					(<section className="category">
+						<h3>{currentCategoryData.title ?? ""}</h3>
+						<p className="category-description">{currentCategoryData.description ?? ""}</p>
+						<button id="explore-category">Explore {currentCategoryData.name ?? ""}</button>
+						<section id="courses" className="courses"><Slicker courses={currentCategoryData.courses}/>
+						</section>
+					</section>)}
 			</section>
 		)
 	}
@@ -85,14 +121,13 @@ class HomeMain extends React.Component {
 					Choose from 185,000 online video courses with new additions published
 					every month
 				</p>
-				{(Object.keys(this.props.coursesData).length) ? <CourseCategory coursesData={this.props.coursesData}/> :
-					<section></section>}
+				<Outlet/>
 			</main>
 		)
 	}
 }
 
-export class HomePageComponent extends React.Component {
+class HomePageComponent extends React.Component {
 
 	constructor(props) {
 		super(props);
@@ -101,36 +136,18 @@ export class HomePageComponent extends React.Component {
 		}
 	}
 
-	componentDidMount() {
-		this.fetchAllCoursesData();
-	}
-
-	componentWillUnmount() {
-		allCoursesCache = [];
-	}
-
-	fetchAllCoursesData() {
-		fetch(apiUrl + "db")
-			.then(response => response.json())
-			.then(data => {
-				this.setState({
-					allCoursesData: data
-				});
-				for (let category in data) {
-					for (let course of data[category]["courses"]) {
-						allCoursesCache.push(course);
-					}
-				}
-			});
-	}
-
 	render() {
 		return (
 			<section>
 				<NavBarComponent id="home-nav"/>
 				<HomeHeader/>
-				<HomeMain coursesData={this.state.allCoursesData}/>
+				<HomeMain/>
 			</section>
 		)
 	}
+}
+
+export {
+	HomePageComponent,
+	CourseCategory
 }
